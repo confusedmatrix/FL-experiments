@@ -7,7 +7,6 @@ import torch
 
 from src.config import GLOBAL_WEIGHTS_FILE_PATH
 from src.Client import ClientFactory
-from src.Model import model_fn
 
 
 class AbstractServer(ABC):

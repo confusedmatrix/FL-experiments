@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -43,8 +45,15 @@ class DummyFederatedDataset(FederatedDataset, DummyDataset):
         """
         Partitions train and test datasets via given strategy
         """
-        self.client_train_sets = random_split(self.train_set, [int(len(self.train_set) / n_splits) for _ in range(n_splits)])
-        self.client_test_sets = random_split(self.test_set, [int(len(self.test_set) / n_splits) for _ in range(n_splits)])
+        def get_split_lengths(dataset):
+            ds_len = len(dataset)
+            split_lens = [ds_len // n_splits for _ in range(n_splits)]
+            if ds_len % n_splits != 0:
+                split_lens[-1] += ds_len % n_splits
+            return split_lens
+
+        self.client_train_sets = random_split(self.train_set, get_split_lengths(self.train_set))
+        self.client_test_sets = random_split(self.test_set, get_split_lengths(self.test_set))
 
     def get_train_data_for_client(self, k, batch_size=64, shuffle=True):
         """
@@ -72,17 +81,6 @@ class SimpleModel(torch.nn.Module):
         return out
 
 
-# Initialise the datsets
-available_datasets = {
-    'StdDataset': DummyDataset,
-    'FedDataset': DummyFederatedDataset
-}
-
-# Define a model init function
-available_models = {
-    'SimpleModel': lambda ds: SimpleModel(input_size = ds.meta['n_features'], output_size=ds.meta['n_labels'])
-}
-
 # Define experiment parameters
 args = {
     'algorithm': 'FedAvg',
@@ -91,7 +89,10 @@ args = {
     'n_clients': 10,
     'n_rounds': 3
 }
-settings = ExperimentSettings(datasets=available_datasets, models=available_models, **args)
+settings = ExperimentSettings(**args)
+settings.addDataset('StdDataset', DummyDataset)
+settings.addDataset('FedDataset', DummyFederatedDataset)
+settings.addModel('SimpleModel', lambda ds: SimpleModel(input_size = ds.meta['n_features'], output_size=ds.meta['n_labels']))
 print(settings.get_settings())
 
 # Setup experiment with defined settings

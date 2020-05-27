@@ -117,14 +117,13 @@ class ExperimentSettings():
     Stores the specified settings
     """
 
-    def __init__(self, datasets, models, **kwargs):
+    def __init__(self, **kwargs):
         """
         Takes settings in as kwargs and sets them as instance variables
         """
 
-        # Set the available datasets/models
-        self.datasets = datasets
-        self.models = models
+        self.datasets = {}
+        self.models = {}
 
         # Set defaults
         for name in SETTINGS_DEFINITIONS:
@@ -136,6 +135,12 @@ class ExperimentSettings():
             if 'choices' in SETTINGS_DEFINITIONS[name]:
                 assert value in SETTINGS_DEFINITIONS[name]['choices'], f'Invalid value "{value}" for experiment setting: "{name}"'
             setattr(self, name, value)
+
+    def addDataset(self, name, dataset):
+        self.datasets[name] = dataset
+
+    def addModel(self, name, model_fn):
+        self.models[name] = model_fn
 
     def get_settings(self):
         """
