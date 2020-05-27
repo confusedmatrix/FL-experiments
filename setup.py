@@ -8,6 +8,6 @@ setup(
     author='confusedmatrix',
     author_email='confusedmatrix@gmail.com',
     license='MIT',
-    packages=['src'],
+    packages=['FLexperiments'],
     zip_safe=False
 )
