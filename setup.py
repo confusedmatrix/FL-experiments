@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='FLexperiments',
@@ -8,6 +8,6 @@ setup(
     author='confusedmatrix',
     author_email='confusedmatrix@gmail.com',
     license='MIT',
-    packages=['FLexperiments'],
+    packages=find_packages(),
     zip_safe=False
 )
