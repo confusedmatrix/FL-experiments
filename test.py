@@ -5,9 +5,9 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader, random_split
 
-from src.Dataset import Dataset, FederatedDataset
-from src.ExperimentSettings import SETTINGS_DEFINITIONS, ExperimentSettings
-from src.Experiment import Experiment
+from fl_experiments.Dataset import Dataset, FederatedDataset
+from fl_experiments.ExperimentSettings import SETTINGS_DEFINITIONS, ExperimentSettings
+from fl_experiments.Experiment import Experiment
 
 # Define a dataset or federated dataset
 class DummyDataset(Dataset):

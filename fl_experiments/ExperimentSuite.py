@@ -2,7 +2,7 @@ import csv
 import itertools
 import math
 import random
-from src.ExperimentSettings import SETTINGS_DEFINITIONS
+from .ExperimentSettings import SETTINGS_DEFINITIONS
 
 
 class ExperimentSuite():

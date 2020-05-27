@@ -1,6 +1,6 @@
 import torch
 
-from src.config import GLOBAL_WEIGHTS_FILE_PATH
+from .config import GLOBAL_WEIGHTS_FILE_PATH
 
 class ClientFactory():
     def __init__(self, settings, dataset, model_fn, loss_fn, train_metrics_fn, test_metrics_fn, device):

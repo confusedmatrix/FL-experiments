@@ -5,8 +5,8 @@ import math
 import numpy as np
 import torch
 
-from src.config import GLOBAL_WEIGHTS_FILE_PATH
-from src.Client import ClientFactory
+from .config import GLOBAL_WEIGHTS_FILE_PATH
+from .Client import ClientFactory
 
 
 class AbstractServer(ABC):

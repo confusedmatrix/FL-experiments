@@ -11,10 +11,10 @@ import numpy as np
 import torch
 from sklearn.cluster import AgglomerativeClustering
 
-from src.config import MAX_TIMEOUT, EXPERIMENT_SETTINGS_FILE_NAME, ROUND_RESULTS_FILE_NAME, FINAL_RESULTS_FILE_NAME
-from src.ExperimentSettings import ExperimentSettings
-from src.Metric import Metrics, LossMetric, CountMetric, AccuracyMetric, sparse_categorical_accuracy
-from src.Server import CentralizedServer, FedAvgServer
+from .config import MAX_TIMEOUT, EXPERIMENT_SETTINGS_FILE_NAME, ROUND_RESULTS_FILE_NAME, FINAL_RESULTS_FILE_NAME
+from .ExperimentSettings import ExperimentSettings
+from .Metric import Metrics, LossMetric, CountMetric, AccuracyMetric, sparse_categorical_accuracy
+from .Server import CentralizedServer, FedAvgServer
 
 
 class Experiment():
