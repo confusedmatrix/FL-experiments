@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader, random_split
 
-from src.datasets.Dataset import Dataset, FederatedDataset
+from src.Dataset import Dataset, FederatedDataset
 from src.ExperimentSettings import SETTINGS_DEFINITIONS, ExperimentSettings
 from src.Experiment import Experiment
 
