@@ -3,11 +3,12 @@ import torch
 from .config import GLOBAL_WEIGHTS_FILE_PATH
 
 class ClientFactory():
-    def __init__(self, settings, dataset, model_fn, loss_fn, train_metrics_fn, test_metrics_fn, device):
+    def __init__(self, settings, dataset, model_fn, loss_fn, optim_fn, train_metrics_fn, test_metrics_fn, device):
         self.settings = settings
         self.dataset = dataset
         self.model_fn = model_fn
         self.loss_fn = loss_fn
+        self.optim_fn = optim_fn
         self.train_metrics_fn = train_metrics_fn
         self.test_metrics_fn = test_metrics_fn
         self.device = device
@@ -19,19 +20,21 @@ class ClientFactory():
                       test_loader=self.dataset.get_test_data_for_client(k),
                       model_fn=self.model_fn,
                       loss_fn=self.loss_fn,
+                      optim_fn=self.optim_fn,
                       train_metrics=self.train_metrics_fn(),
                       test_metrics=self.test_metrics_fn(),
                       device=self.device)
 
 
 class Client():
-    def __init__(self, k, settings, train_loader, test_loader, model_fn, loss_fn, train_metrics, test_metrics, device):
+    def __init__(self, k, settings, train_loader, test_loader, model_fn, loss_fn, optim_fn, train_metrics, test_metrics, device):
         self.id = k
         self.settings = settings
         self.train_loader = train_loader
         self.test_loader = test_loader
         self.model = model_fn()
         self.loss_fn = loss_fn
+        self.optim_fn = optim_fn
         self.train_metrics = train_metrics
         self.test_metrics = test_metrics
         self.device = device
@@ -52,17 +55,19 @@ class Client():
         """
         Perform training
         """
-        optimizer = torch.optim.SGD(self.model.parameters(), lr=self.settings['learning_rate'])
+        optim = self.optim_fn(self.model)
         for epoch in range(self.settings['n_epochs']):
             self.train_metrics.reset()
             for features, labels in self.train_loader:
                 features, labels = features.to(self.device), labels.to(self.device)
+                self.model.train()
+
                 preds = self.model(features)
                 loss = self.loss_fn(preds, labels)
 
-                optimizer.zero_grad()
+                optim.zero_grad()
                 loss.backward()
-                optimizer.step()
+                optim.step()
 
                 self.train_metrics.update(preds, labels)
             else:

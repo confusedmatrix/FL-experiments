@@ -23,6 +23,16 @@ SETTINGS_DEFINITIONS['model'] = {
     'default': None,
     'command': ['-m', '--model'],
 }
+SETTINGS_DEFINITIONS['loss_fn'] = {
+    'type': str,
+    'default': None,
+    'command': ['-z', '--loss_fn'],
+}
+SETTINGS_DEFINITIONS['optim_fn'] = {
+    'type': str,
+    'default': None,
+    'command': ['-o', '--optim_fn'],
+}
 SETTINGS_DEFINITIONS['batch_size'] = {
     'type': int,
     'default': 10,
@@ -117,43 +127,50 @@ class ExperimentSettings():
     Stores the specified settings
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         """
         Takes settings in as kwargs and sets them as instance variables
         """
 
         self.datasets = {}
         self.models = {}
+        self.loss_fns = {}
+        self.optim_fns = {}
+        self.metrics = {}
+        self.config = {}
 
-        # Set defaults
+        # Set sonfig defaults
         for name in SETTINGS_DEFINITIONS:
-            setattr(self, name, SETTINGS_DEFINITIONS[name]['default'])
+            self.config[name] = SETTINGS_DEFINITIONS[name]['default']
 
-        # Overwrite defaults with values from kwargs
+    def add_dataset(self, name, dataset):
+        self.datasets[name] = dataset
+
+    def add_model(self, name, model_fn):
+        self.models[name] = model_fn
+
+    def add_loss_fn(self, name, loss_fn):
+        self.loss_fns[name] = loss_fn
+
+    def add_optim_fn(self, name, optim_fn):
+        self.optim_fns[name] = optim_fn
+
+    def add_metric(self, name, metric):
+        self.metrics[name] = metric
+
+    def set_config(self, **kwargs):
         for name, value in kwargs.items():
             assert name in SETTINGS_DEFINITIONS, f'Unrecognized experiment setting: "{name}"'
             if 'choices' in SETTINGS_DEFINITIONS[name]:
                 assert value in SETTINGS_DEFINITIONS[name]['choices'], f'Invalid value "{value}" for experiment setting: "{name}"'
-            setattr(self, name, value)
-
-    def addDataset(self, name, dataset):
-        self.datasets[name] = dataset
-
-    def addModel(self, name, model_fn):
-        self.models[name] = model_fn
-
-    def get_settings(self):
-        """
-        Get settings as a sorted list of tuples (key, value)
-        """
-        return dict(sorted(vars(self).items()))
+            self.config[name] = value
 
     def get_settings_as_command_line_arg_list(self):
         """
         Returns all settings as an argument list to be passed on the command line, e.g. ['-l', '0.01', '-r', '100', ...]
         """
         arg_list = []
-        for (key, val) in self.get_settings():
+        for (key, val) in self.config:
             # Skip settings with a value of None (likely optional settings)
             if val is None:
                 continue

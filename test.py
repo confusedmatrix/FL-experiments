@@ -82,18 +82,24 @@ class SimpleModel(torch.nn.Module):
 
 
 # Define experiment parameters
+settings = ExperimentSettings()
+settings.add_dataset('StdDataset', DummyDataset)
+settings.add_dataset('FedDataset', DummyFederatedDataset)
+settings.add_model('SimpleModel', lambda ds: SimpleModel(input_size = ds.meta['n_features'], output_size=ds.meta['n_labels']))
+settings.add_loss_fn('NLLLoss', torch.nn.NLLLoss)
+settings.add_optim_fn('SGD', lambda model, config: torch.optim.SGD(model.parameters(), lr=config['learning_rate']))
+
 args = {
     'algorithm': 'FedAvg',
     'dataset': 'FedDataset',
     'model': 'SimpleModel',
     'n_clients': 10,
-    'n_rounds': 3
+    'n_rounds': 100,
+    'loss_fn': 'NLLLoss',
+    'optim_fn': 'SGD'
 }
-settings = ExperimentSettings(**args)
-settings.addDataset('StdDataset', DummyDataset)
-settings.addDataset('FedDataset', DummyFederatedDataset)
-settings.addModel('SimpleModel', lambda ds: SimpleModel(input_size = ds.meta['n_features'], output_size=ds.meta['n_labels']))
-print(settings.get_settings())
+settings.set_config(**args)
+print(settings.config)
 
 # Setup experiment with defined settings
 experiment = Experiment(settings)

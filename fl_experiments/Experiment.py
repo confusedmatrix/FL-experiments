@@ -26,37 +26,49 @@ class Experiment():
         """
         Takes in an ExperimentSettings object (as settings) and sets it as an instance variable. Initialises loss function, dataset etc
         """
-        assert isinstance(
-            settings, ExperimentSettings), "settings must implement ExperimentSettings"
-        self.settings = dict(settings.get_settings())
+        assert isinstance(settings, ExperimentSettings), "settings must implement ExperimentSettings"
+        self.settings = settings
+        self.config = settings.config
 
         # Set up dataset
-        dataset_name = self.settings['dataset']
-        assert dataset_name in self.settings['datasets'], f'Unrecognised Dataset: "{dataset_name}"'
-        Dataset = self.settings['datasets'][dataset_name]
-        self.dataset = Dataset(self.settings)
+        dataset_name = self.config['dataset']
+        assert dataset_name in self.settings.datasets, f'Unrecognised Dataset: "{dataset_name}"'
+        Dataset = self.settings.datasets[dataset_name]
+        self.dataset = Dataset(self.config)
 
         # Set up model
-        model_name = self.settings['model']
-        assert model_name in self.settings['model'], f'Unrecognised Model: "{model_name}"'
-        Model = self.settings['models'][model_name]
+        model_name = self.config['model']
+        assert model_name in self.settings.models, f'Unrecognised Model: "{model_name}"'
+        Model = self.settings.models[model_name]
         self.model_fn = lambda: Model(self.dataset)
 
-        self.loss_fn = torch.nn.NLLLoss()
+        # Set up loss fn
+        loss_fn_name = self.config['loss_fn']
+        assert loss_fn_name in self.settings.loss_fns, f'Unrecognised Loss function: "{loss_fn_name}"'
+        LossFn = self.settings.loss_fns[loss_fn_name]
+        self.loss_fn = LossFn()
+
+        # Set up optimizer
+        optim_fn_name = self.config['optim_fn']
+        assert optim_fn_name in self.settings.optim_fns, f'Unrecognised Optimizer: "{optim_fn_name}"'
+        Optim = self.settings.optim_fns[optim_fn_name]
+        self.optim_fn = lambda model: Optim(model, self.config)
+
+        # Set up metrics
         self.train_metrics_fn = lambda: Metrics([CountMetric(),
                                                 LossMetric(loss_fn=self.loss_fn),
                                                 AccuracyMetric(accuracy_fn=sparse_categorical_accuracy)])
         self.test_metrics_fn = self.train_metrics_fn
 
-        np.random.seed(self.settings['seed'])
-        torch.manual_seed(self.settings['seed'])
+        np.random.seed(self.config['seed'])
+        torch.manual_seed(self.config['seed'])
 
         use_cuda = torch.cuda.is_available()
         self.device = torch.device(
             f'cuda:{GPUtil.getFirstAvailable()[0]}' if use_cuda else 'cpu')
 
         self.init_server()
-        self.write_csv(EXPERIMENT_SETTINGS_FILE_NAME, self.settings)
+        self.write_csv(EXPERIMENT_SETTINGS_FILE_NAME, self.config)
 
     def write_csv(self, filepath, results):
         """
@@ -91,12 +103,13 @@ class Experiment():
         return weight_vector
 
     def init_server(self):
-        Server = CentralizedServer if self.settings['algorithm'] == 'Centralized' else FedAvgServer
-        self.server = Server(settings=self.settings,
+        Server = CentralizedServer if self.config['algorithm'] == 'Centralized' else FedAvgServer
+        self.server = Server(settings=self.config,
                              device=self.device,
                              dataset=self.dataset,
                              model_fn=self.model_fn,
                              loss_fn=self.loss_fn,
+                             optim_fn=self.optim_fn,
                              train_metrics_fn=self.train_metrics_fn,
                              test_metrics_fn=self.test_metrics_fn)
 
@@ -116,8 +129,8 @@ class Experiment():
             test_acc = np.mean(test_accs)
             test_acc_p10 = np.percentile(test_accs, 10)
             test_acc_p90 = np.percentile(test_accs, 90)
-            test_acc_reached_target = len(list(filter(lambda x: x >= self.settings['target_accuracy'], test_accs))) / len(
-                test_accs) if self.settings['target_accuracy'] is not None else None
+            test_acc_reached_target = len(list(filter(lambda x: x >= self.config['target_accuracy'], test_accs))) / len(
+                test_accs) if self.config['target_accuracy'] is not None else None
 
         # Centralized learning case
         else:
@@ -134,7 +147,7 @@ class Experiment():
 
     def format_round_results(self, c, n_clients, client_idxs, n_train_examples, train_loss, train_acc, test_loss, test_acc, test_acc_p10, test_acc_p90, test_acc_reached_target):
         results = OrderedDict()
-        results['settings_id'] = self.settings['id']
+        results['settings_id'] = self.config['id']
         results['timestamp'] = time()
         results['n_clients'] = n_clients
         results['client_idxs'] = client_idxs
@@ -152,7 +165,7 @@ class Experiment():
 
     def run(self):
         print("EXPERIMENT SETTINGS")
-        for k, v in self.settings.items():
+        for k, v in self.config.items():
             print(f"{k}: {v}")
         print(f"Using device: {self.device}")
 
@@ -164,25 +177,25 @@ class Experiment():
         global_weight_delta_norm = math.inf
 
         # If running training to convergence (global_weight_delta_norm_threshold sets a measure for when FL has reached a stationary solution)
-        if 'global_weight_delta_norm_threshold' in self.settings and self.settings['global_weight_delta_norm_threshold'] is not None:
+        if 'global_weight_delta_norm_threshold' in self.config and self.config['global_weight_delta_norm_threshold'] is not None:
             print(
-                f"Running learning until convergence (global delta norm < {self.settings['global_weight_delta_norm_threshold']})\n")
+                f"Running learning until convergence (global delta norm < {self.config['global_weight_delta_norm_threshold']})\n")
             def condition(
-            ): return global_weight_delta_norm > self.settings['global_weight_delta_norm_threshold']
+            ): return global_weight_delta_norm > self.config['global_weight_delta_norm_threshold']
 
         # If running training for a fixed number of communication rounds
-        elif 'n_rounds' in self.settings and isinstance(self.settings['n_rounds'], int):
+        elif 'n_rounds' in self.config and isinstance(self.config['n_rounds'], int):
             print("Running learning for %d communication rounds\n" %
-                  self.settings['n_rounds'])
+                  self.config['n_rounds'])
 
-            def condition(): return c < self.settings['n_rounds']
+            def condition(): return c < self.config['n_rounds']
 
         # Otherwise stop once target accuracy is achieved
         else:
             print("Running learning until test set accuracy reaches: %0.2f%%\n" % (
-                self.settings['target_accuracy']*100))
+                self.config['target_accuracy']*100))
 
-            def condition(): return test_acc < self.settings['target_accuracy']
+            def condition(): return test_acc < self.config['target_accuracy']
 
         # Start distributed learning
         while(condition() and elapsed < MAX_TIMEOUT):
@@ -194,13 +207,13 @@ class Experiment():
                 self.server.model.state_dict())
 
             # In distributed setting only
-            if self.settings['algorithm'] != 'Centralized':
+            if self.config['algorithm'] != 'Centralized':
                 self.server.sample_clients()
 
             weights, train_metrics = self.server.train()
 
             # In distributed setting only
-            if self.settings['algorithm'] != 'Centralized':
+            if self.config['algorithm'] != 'Centralized':
                 self.server.aggregate_models(weights, train_metrics)
 
             test_metrics = self.server.evaluate()
@@ -211,7 +224,7 @@ class Experiment():
                 f"MEAN TEST ACCURACY: {test_acc}, 10th percentile: {test_acc_p10}, 90th percentile: {test_acc_p90}, % clients reaching target accuracy: {test_acc_reached_target}")
 
             results = self.format_round_results(
-                c, self.settings['n_clients'], None, n_train_examples, train_loss, train_acc, test_loss, test_acc, test_acc_p10, test_acc_p90, test_acc_reached_target)
+                c, self.config['n_clients'], None, n_train_examples, train_loss, train_acc, test_loss, test_acc, test_acc_p10, test_acc_p90, test_acc_reached_target)
             self.write_csv(ROUND_RESULTS_FILE_NAME, results)
 
             global_weight_delta_norm = torch.dist(
@@ -237,21 +250,21 @@ class FCFLExperiment(Experiment):
     def __init__(self, settings, client_idxs=None):
         super().__init__(settings)
         self.initial_client_idxs = client_idxs if client_idxs is not None else list(
-            range(self.settings['n_clients']))
-        assert 'cluster_dist_metric' in self.settings and self.settings['cluster_dist_metric'] in (
+            range(self.config['n_clients']))
+        assert 'cluster_dist_metric' in self.config and self.config['cluster_dist_metric'] in (
             'manhattan', 'euclidean', 'cosine'), 'cluster_dist_metric must be: manhattan, euclidean or cosine'
 
-        if self.settings['cluster_algorithm'] == 'hierarchical':
-            assert 'cluster_hierarchical_dist_threshold' in self.settings and isinstance(
-                self.settings['cluster_hierarchical_dist_threshold'], float), 'cluster_hierarchical_dist_threshold setting must be set to a float'
-            assert 'cluster_hierarchical_linkage' in self.settings and self.settings['cluster_hierarchical_linkage'] in (
+        if self.config['cluster_algorithm'] == 'hierarchical':
+            assert 'cluster_hierarchical_dist_threshold' in self.config and isinstance(
+                self.config['cluster_hierarchical_dist_threshold'], float), 'cluster_hierarchical_dist_threshold setting must be set to a float'
+            assert 'cluster_hierarchical_linkage' in self.config and self.config['cluster_hierarchical_linkage'] in (
                 'ward', 'average', 'complete', 'single'), 'cluster_hierarchical_linkage setting must be: ward, average, complete or single'
-            if self.settings['cluster_hierarchical_linkage'] == 'ward':
-                assert self.settings['cluster_dist_metric'] == 'euclidean', 'When using cluster_hierarchical_linkage=ward, cluster_dist_metric must be set to euclidean'
+            if self.config['cluster_hierarchical_linkage'] == 'ward':
+                assert self.config['cluster_dist_metric'] == 'euclidean', 'When using cluster_hierarchical_linkage=ward, cluster_dist_metric must be set to euclidean'
 
     def run(self):
         print("EXPERIMENT SETTINGS")
-        for k, v in self.settings.items():
+        for k, v in self.config.items():
             print(f"{k}: {v}")
         print(f"Using device: {self.device}")
 
@@ -283,9 +296,9 @@ class FCFLExperiment(Experiment):
 
         clustering = AgglomerativeClustering(
             n_clusters=None,
-            affinity=self.settings['cluster_dist_metric'],
-            linkage=self.settings['cluster_hierarchical_linkage'],
-            distance_threshold=self.settings['cluster_hierarchical_dist_threshold']).fit([cw.cpu().numpy() for cw in client_weights])
+            affinity=self.config['cluster_dist_metric'],
+            linkage=self.config['cluster_hierarchical_linkage'],
+            distance_threshold=self.config['cluster_hierarchical_dist_threshold']).fit([cw.cpu().numpy() for cw in client_weights])
         n_clusters = clustering.n_clusters_
 
         print(clustering.labels_)
@@ -318,32 +331,32 @@ class FCFLExperiment(Experiment):
         global_weight_delta_norm = math.inf
 
         # If running training to convergence (global_weight_delta_norm_threshold sets a measure for when FL has reached a stationary solution)
-        if 'global_weight_delta_norm_threshold' in self.settings and self.settings['global_weight_delta_norm_threshold'] is not None:
+        if 'global_weight_delta_norm_threshold' in self.config and self.config['global_weight_delta_norm_threshold'] is not None:
             print(
-                f"Running learning until convergence (global delta norm < {self.settings['global_weight_delta_norm_threshold']})\n")
+                f"Running learning until convergence (global delta norm < {self.config['global_weight_delta_norm_threshold']})\n")
             def condition(
-            ): return global_weight_delta_norm > self.settings['global_weight_delta_norm_threshold']
+            ): return global_weight_delta_norm > self.config['global_weight_delta_norm_threshold']
 
         # If n_pre_cluster_rounds is set and we are operating before clustering has occcured
-        elif cluster_name == '1' and 'n_pre_cluster_rounds' in self.settings and self.settings['n_pre_cluster_rounds'] is not None:
+        elif cluster_name == '1' and 'n_pre_cluster_rounds' in self.config and self.config['n_pre_cluster_rounds'] is not None:
             print("Running learning for %d communication rounds prior to clustering\n" %
-                  self.settings['n_pre_cluster_rounds'])
+                  self.config['n_pre_cluster_rounds'])
 
-            def condition(): return c < self.settings['n_pre_cluster_rounds']
+            def condition(): return c < self.config['n_pre_cluster_rounds']
 
         # If running training for a fixed number of communication rounds
-        elif 'n_rounds' in self.settings and self.settings['n_rounds'] is not None:
+        elif 'n_rounds' in self.config and self.config['n_rounds'] is not None:
             print("Running learning for %d communication rounds\n" %
-                  self.settings['n_rounds'])
+                  self.config['n_rounds'])
 
-            def condition(): return c < self.settings['n_rounds']
+            def condition(): return c < self.config['n_rounds']
 
         # Otherwise stop once target accuracy is achieved
         else:
             print("Running learning until test set accuracy reaches: %0.2f%%\n" % (
-                self.settings['target_accuracy']*100))
+                self.config['target_accuracy']*100))
 
-            def condition(): return test_acc < self.settings['target_accuracy']
+            def condition(): return test_acc < self.config['target_accuracy']
 
         # Load initial global weights on server
         self.server.load_model_weights(initial_weights)

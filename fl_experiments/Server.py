@@ -10,12 +10,13 @@ from .Client import ClientFactory
 
 
 class AbstractServer(ABC):
-    def __init__(self, settings, device, dataset, model_fn, loss_fn, train_metrics_fn, test_metrics_fn):
+    def __init__(self, settings, device, dataset, model_fn, loss_fn, optim_fn, train_metrics_fn, test_metrics_fn):
         self.settings = settings
         self.device = device
         self.dataset = dataset
         self.model_fn = model_fn
         self.loss_fn = loss_fn
+        self.optim_fn = optim_fn
         self.train_metrics_fn = train_metrics_fn
         self.test_metrics_fn = test_metrics_fn
 
@@ -35,15 +36,16 @@ class AbstractServer(ABC):
 
 
 class AbstractFederatedLearningServer(AbstractServer):
-    def __init__(self, settings, device, dataset, model_fn, loss_fn, train_metrics_fn, test_metrics_fn):
+    def __init__(self, settings, device, dataset, model_fn, loss_fn, optim_fn, train_metrics_fn, test_metrics_fn):
         super().__init__(settings, device, dataset, model_fn,
-                         loss_fn, train_metrics_fn, test_metrics_fn)
+                         loss_fn, optim_fn, train_metrics_fn, test_metrics_fn)
         self.settings = settings
         self.clients = None
         self.client_factory = ClientFactory(settings=self.settings,
                                             dataset=self.dataset,
                                             model_fn=self.model_fn,
                                             loss_fn=self.loss_fn,
+                                            optim_fn=self.optim_fn,
                                             train_metrics_fn=self.train_metrics_fn,
                                             test_metrics_fn=self.test_metrics_fn,
                                             device=self.device)
@@ -133,9 +135,9 @@ class AbstractFederatedLearningServer(AbstractServer):
 
 
 class CentralizedServer(AbstractServer):
-    def __init__(self, settings, device, dataset, model_fn, loss_fn, train_metrics_fn, test_metrics_fn):
+    def __init__(self, settings, device, dataset, model_fn, loss_fn, optim_fn, train_metrics_fn, test_metrics_fn):
         super().__init__(settings, device, dataset, model_fn,
-                         loss_fn, train_metrics_fn, test_metrics_fn)
+                         loss_fn, optim_fn, train_metrics_fn, test_metrics_fn)
 
         self.train_loader = self.dataset.get_train_data(
             batch_size=self.settings['batch_size'])
@@ -145,20 +147,18 @@ class CentralizedServer(AbstractServer):
         self.test_metrics = self.test_metrics_fn()
 
     def train(self):
-        optimizer = torch.optim.SGD(
-            self.model.parameters(), lr=self.settings['learning_rate'])
+        optim = self.optim_fn(self.model)
         for epoch in range(self.settings['n_epochs']):
             self.train_metrics.reset()
             for features, labels in self.train_loader:
-                features, labels = features.to(
-                    self.device), labels.to(self.device)
+                features, labels = features.to(self.device), labels.to(self.device)
+                self.model.train()
                 preds = self.model(features)
-                # print(preds.size(), labels.size())
                 loss = self.loss_fn(preds, labels)
 
-                optimizer.zero_grad()
+                optim.zero_grad()
                 loss.backward()
-                optimizer.step()
+                optim.step()
 
                 self.train_metrics.update(preds, labels)
             else:
