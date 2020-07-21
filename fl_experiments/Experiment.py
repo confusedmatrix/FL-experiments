@@ -13,7 +13,7 @@ from sklearn.cluster import AgglomerativeClustering
 
 from .config import MAX_TIMEOUT, EXPERIMENT_SETTINGS_FILE_NAME, ROUND_RESULTS_FILE_NAME, FINAL_RESULTS_FILE_NAME
 from .ExperimentSettings import ExperimentSettings
-from .Metric import Metrics, LossMetric, CountMetric, AccuracyMetric, sparse_categorical_accuracy
+from .Metric import Metrics, LossMetric, CountMetric, AccuracyMetric, CustomMetric
 from .Server import CentralizedServer, FedAvgServer
 
 
@@ -55,9 +55,18 @@ class Experiment():
         self.optim_fn = lambda model: Optim(model, self.config)
 
         # Set up metrics
-        self.train_metrics_fn = lambda: Metrics([CountMetric(),
-                                                LossMetric(loss_fn=self.loss_fn),
-                                                AccuracyMetric(accuracy_fn=sparse_categorical_accuracy)])
+        metrics = []
+        metrics.append(CountMetric())
+        metrics.append(LossMetric(loss_fn=self.loss_fn))
+        
+        assert 'accuracy' in self.settings.metrics, "Accuracy metric not defined (ensure you have called settings.add_metric('accuracy', fn)"
+        for name, metric_fn in self.settings.metrics.items():
+            if name == 'accuracy':
+                metrics.append(AccuracyMetric(acc_fn=self.settings.metrics['accuracy']))
+            else:
+                metrics.append(CustomMetric(name, metric_fn))
+
+        self.train_metrics_fn = lambda: Metrics(metrics)
         self.test_metrics_fn = self.train_metrics_fn
 
         np.random.seed(self.config['seed'])
@@ -114,6 +123,8 @@ class Experiment():
                              test_metrics_fn=self.test_metrics_fn)
 
     def get_train_test_stats(self, train_metrics, test_metrics):
+        # TODO report on custom metrics?
+
         # Federated learning case
         if type(train_metrics) is tuple:
             n_train_examples = np.sum(

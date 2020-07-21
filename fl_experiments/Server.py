@@ -163,7 +163,7 @@ class CentralizedServer(AbstractServer):
                 self.train_metrics.update(preds, labels)
             else:
                 print(
-                    f"TRAINING: Epoch {epoch+1}, #examples {self.train_metrics.get('count').result()}, Loss {self.train_metrics.get('loss').result()}, Accuracy {self.train_metrics.get('accuracy').result()}")
+                    f"TRAINING: Epoch {epoch+1}, {self.train_metrics.print_results()}")
 
         return self.model.state_dict(), self.train_metrics
 
@@ -177,7 +177,7 @@ class CentralizedServer(AbstractServer):
                 self.test_metrics.update(preds, labels)
 
         print(
-            f"EVALUATION: #examples {self.test_metrics.get('count').result()}, Loss {self.test_metrics.get('loss').result()}, Accuracy {self.test_metrics.get('accuracy').result()}\n")
+            f"EVALUATION: {self.test_metrics.print_results()}\n")
 
         return self.test_metrics
 

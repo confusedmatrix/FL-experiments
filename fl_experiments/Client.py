@@ -71,7 +71,7 @@ class Client():
 
                 self.train_metrics.update(preds, labels)
             else:
-                print(f"LOCAL TRAINING: Client #{self.id}, Epoch {epoch+1}, #examples {self.train_metrics.get('count').result()}, Loss {self.train_metrics.get('loss').result()}, Accuracy {self.train_metrics.get('accuracy').result()}")
+                print(f"LOCAL TRAINING: Client #{self.id}, Epoch {epoch+1}, {self.train_metrics.print_results()}")
         
         return self.model.state_dict(), self.train_metrics
 
@@ -88,6 +88,6 @@ class Client():
                 preds = self.model(features)
                 self.test_metrics.update(preds, labels)
 
-        # print(f"LOCAL EVALUATION: Client #{self.id},#examples {self.test_metrics.get('count').result()}, Loss {self.test_metrics.get('loss').result()}, Accuracy {self.test_metrics.get('accuracy').result()}")
+        # print(f"LOCAL EVALUATION: Client #{self.id}, {self.test_metrics.print_results()}")
 
         return self.test_metrics

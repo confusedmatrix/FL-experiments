@@ -89,6 +89,14 @@ settings.add_model('SimpleModel', lambda ds: SimpleModel(input_size = ds.meta['n
 settings.add_loss_fn('NLLLoss', torch.nn.NLLLoss)
 settings.add_optim_fn('SGD', lambda model, config: torch.optim.SGD(model.parameters(), lr=config['learning_rate']))
 
+def accuracy(log_ps, target):
+    ps = torch.exp(log_ps)
+    top_p, top_class = ps.topk(1, dim=1)
+    equals = top_class == target.view(*top_class.shape)
+    return torch.mean(equals.type(torch.FloatTensor))
+
+settings.add_metric('accuracy', accuracy)
+
 args = {
     'algorithm': 'FedAvg',
     'dataset': 'FedDataset',
