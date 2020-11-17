@@ -26,12 +26,12 @@ SETTINGS_DEFINITIONS['model'] = {
 SETTINGS_DEFINITIONS['loss_fn'] = {
     'type': str,
     'default': None,
-    'command': ['-z', '--loss_fn'],
+    'command': ['-z', '--loss-fn'],
 }
 SETTINGS_DEFINITIONS['optim_fn'] = {
     'type': str,
     'default': None,
-    'command': ['-o', '--optim_fn'],
+    'command': ['-o', '--optim-fn'],
 }
 SETTINGS_DEFINITIONS['batch_size'] = {
     'type': int,
