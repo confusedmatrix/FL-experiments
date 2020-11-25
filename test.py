@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader, random_split
 
 from fl_experiments.Dataset import Dataset, FederatedDataset
-from fl_experiments.ExperimentSettings import SETTINGS_DEFINITIONS, ExperimentSettings
+from fl_experiments.ExperimentSettings import ExperimentSettings
 from fl_experiments.Experiment import Experiment
 
 # Define a dataset or federated dataset
@@ -96,13 +96,17 @@ def accuracy(log_ps, target):
     return torch.mean(equals.type(torch.FloatTensor))
 
 settings.add_metric('accuracy', accuracy)
+settings.add_metric('dummy_metric', accuracy)
 
 args = {
     'algorithm': 'FedAvg',
     'dataset': 'FedDataset',
+    # 'algorithm': 'Centralized',
+    # 'dataset': 'StdDataset',
     'model': 'SimpleModel',
     'n_clients': 10,
-    'n_rounds': 100,
+    'n_rounds': 3,
+    # 'n_epochs': 3,
     'loss_fn': 'NLLLoss',
     'optim_fn': 'SGD'
 }

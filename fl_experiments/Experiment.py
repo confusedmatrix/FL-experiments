@@ -34,7 +34,9 @@ class Experiment():
         dataset_name = self.config['dataset']
         assert dataset_name in self.settings.datasets, f'Unrecognised Dataset: "{dataset_name}"'
         Dataset = self.settings.datasets[dataset_name]
+        print('LOADING DATASET...')
         self.dataset = Dataset(self.config)
+        print('DATASET LOADED')
 
         # Set up model
         model_name = self.config['model']
@@ -122,57 +124,66 @@ class Experiment():
                              train_metrics_fn=self.train_metrics_fn,
                              test_metrics_fn=self.test_metrics_fn)
 
-    def get_train_test_stats(self, train_metrics, test_metrics):
-        # TODO report on custom metrics?
+    def get_train_test_stats(self, c, train_metrics, test_metrics):
+        stats = OrderedDict()
+        stats['round'] = c
+        stats['n_clients'] = None
+        stats['n_train_examples'] = None
+        stats['train_loss'] = None
+        stats['train_acc'] = None
+        stats['test_loss'] = None
+        stats['test_acc_list'] = []
+        stats['test_acc'] = None
+        stats['test_acc_p10'] = None
+        stats['test_acc_p90'] = None
+        stats['test_acc_reached_target'] = None
 
         # Federated learning case
         if type(train_metrics) is tuple:
-            n_train_examples = np.sum(
-                list(map(lambda m: m.get('count').result(), train_metrics)))
-            train_loss = np.mean(
-                list(map(lambda m: m.get('loss').result(), train_metrics)))
-            train_acc = np.mean(
-                list(map(lambda m: m.get('accuracy').result(), train_metrics)))
-            test_loss = np.mean(
-                list(map(lambda m: m.get('loss').result(), test_metrics)))
-            test_accs = list(
-                map(lambda m: m.get('accuracy').result(), test_metrics))
-            test_acc = np.mean(test_accs)
-            test_acc_p10 = np.percentile(test_accs, 10)
-            test_acc_p90 = np.percentile(test_accs, 90)
-            test_acc_reached_target = len(list(filter(lambda x: x >= self.config['target_accuracy'], test_accs))) / len(
-                test_accs) if self.config['target_accuracy'] is not None else None
+            stats['n_clients'] = len(train_metrics)
+            stats['n_train_examples'] = np.sum(list(map(lambda m: m.get('count').result(), train_metrics)))
+            stats['train_loss'] = np.mean(list(map(lambda m: m.get('loss').result(), train_metrics)))
+            stats['train_acc'] = np.mean(list(map(lambda m: m.get('accuracy').result(), train_metrics)))
+            stats['test_loss'] = np.mean(list(map(lambda m: m.get('loss').result(), test_metrics)))
+            stats['test_acc_list'] = list(map(lambda m: m.get('accuracy').result(), test_metrics))
+            stats['test_acc'] = np.mean(stats['test_acc_list'])
+            stats['test_acc_p10'] = np.percentile(stats['test_acc_list'], 10)
+            stats['test_acc_p90'] = np.percentile(stats['test_acc_list'], 90)
+            if self.config['target_accuracy'] is not None:
+                stats['test_acc_reached_target'] = len(list(filter(
+                    lambda x: x >= self.config['target_accuracy'], stats['test_acc_list']))) / len(stats['test_acc_list']) 
+
+            ctm_names = [ctm.name for ctm in train_metrics[0].get_all_custom()]
+            for name in ctm_names:
+                stats[f'train_{name}_list'] = list(map(lambda m: m.get(name).result(), train_metrics))
+                stats[f'train_{name}'] = np.mean(stats[f'train_{name}_list'])
+
+            ctm_names = [ctm.name for ctm in test_metrics[0].get_all_custom()]
+            for name in ctm_names:
+                stats[f'test_{name}_list'] = list(map(lambda m: m.get(name).result(), test_metrics))
+                stats[f'test_{name}'] = np.mean(stats[f'test_{name}_list'])
 
         # Centralized learning case
         else:
-            n_train_examples = train_metrics.get('count').result()
-            train_loss = train_metrics.get('loss').result()
-            train_acc = train_metrics.get('accuracy').result()
-            test_loss = test_metrics.get('loss').result()
-            test_acc = test_metrics.get('accuracy').result()
-            test_acc_p10 = None
-            test_acc_p90 = None
-            test_acc_reached_target = None
+            stats['n_train_examples'] = train_metrics.get('count').result()
+            stats['train_loss'] = train_metrics.get('loss').result()
+            stats['train_acc'] = train_metrics.get('accuracy').result()
+            stats['test_loss'] = test_metrics.get('loss').result()
+            stats['test_acc'] = test_metrics.get('accuracy').result()
 
-        return n_train_examples, train_loss, train_acc, test_loss, test_acc, test_acc_p10, test_acc_p90, test_acc_reached_target
+            custom_train_metrics = train_metrics.get_all_custom()
+            for ctm in custom_train_metrics:
+                stats[ctm.name] = ctm.result()
 
-    def format_round_results(self, c, n_clients, client_idxs, n_train_examples, train_loss, train_acc, test_loss, test_acc, test_acc_p10, test_acc_p90, test_acc_reached_target):
-        results = OrderedDict()
-        results['settings_id'] = self.config['id']
-        results['timestamp'] = time()
-        results['n_clients'] = n_clients
-        results['client_idxs'] = client_idxs
-        results['n_train_examples'] = n_train_examples
-        results['train_loss'] = train_loss
-        results['train_acc'] = train_acc
-        results['test_loss'] = test_loss
-        results['test_acc'] = test_acc
-        results['test_acc_p10'] = test_acc_p10
-        results['test_acc_p90'] = test_acc_p90
-        results['test_acc_reached_target'] = test_acc_reached_target
-        results['round'] = c
+            custom_test_metrics = test_metrics.get_all_custom()
+            for ctm in custom_test_metrics:
+                stats[ctm.name] = ctm.result()
 
-        return results
+        return stats
+
+    def print_round_results(self, stats):
+        output = ', '.join([f'{key}: {str(val)}' for key, val in enumerate(stats)])
+        print('END OF ROUND RESULTS - ', output)
 
     def run(self):
         print("EXPERIMENT SETTINGS")
@@ -228,15 +239,13 @@ class Experiment():
                 self.server.aggregate_models(weights, train_metrics)
 
             test_metrics = self.server.evaluate()
-            n_train_examples, train_loss, train_acc, test_loss, test_acc, test_acc_p10, test_acc_p90, test_acc_reached_target = self.get_train_test_stats(
-                train_metrics, test_metrics)
+            
+            stats = self.get_train_test_stats(c, train_metrics, test_metrics)
+            self.print_round_results(stats)
 
-            print(
-                f"MEAN TEST ACCURACY: {test_acc}, 10th percentile: {test_acc_p10}, 90th percentile: {test_acc_p90}, % clients reaching target accuracy: {test_acc_reached_target}")
-
-            results = self.format_round_results(
-                c, self.config['n_clients'], None, n_train_examples, train_loss, train_acc, test_loss, test_acc, test_acc_p10, test_acc_p90, test_acc_reached_target)
-            self.write_csv(ROUND_RESULTS_FILE_NAME, results)
+            stats['settings_id'] = self.config['id']
+            stats['timestamp'] = time()
+            self.write_csv(ROUND_RESULTS_FILE_NAME, stats)
 
             global_weight_delta_norm = torch.dist(
                 cached_global_weights, self.model_weights_to_vector(self.server.model.state_dict()), p=2)
@@ -246,9 +255,9 @@ class Experiment():
             print(f"{round(elapsed)}s elapsed")
 
         # Record final results to a separate CSV
-        results['time_elapsed'] = elapsed
-        results['timed_out'] = elapsed >= MAX_TIMEOUT
-        self.write_csv(FINAL_RESULTS_FILE_NAME, results)
+        stats['time_elapsed'] = elapsed
+        stats['timed_out'] = elapsed >= MAX_TIMEOUT
+        self.write_csv(FINAL_RESULTS_FILE_NAME, stats)
         print(
             f"Training {'stopped after' if elapsed >= MAX_TIMEOUT else 'complete in'} {c} communication rounds")
 
@@ -387,15 +396,16 @@ class FCFLExperiment(Experiment):
 
             self.server.aggregate_models(weights, train_metrics)
             test_metrics = self.server.evaluate_on(client_idxs)
-            n_train_examples, train_loss, train_acc, test_loss, test_acc, test_acc_p10, test_acc_p90, test_acc_reached_target = self.get_train_test_stats(
-                train_metrics, test_metrics)
+            
+            stats = self.get_train_test_stats(c, train_metrics, test_metrics)
+            print(f'CLUSTER: {cluster_name}')
+            self.print_round_results(stats)
 
-            print(f"CLUSTER: {cluster_name}, MEAN TEST ACCURACY: {test_acc}, 10th percentile: {test_acc_p10}, 90th percentile: {test_acc_p90}, % clients reaching target accuracy: {test_acc_reached_target}")
-
-            results = self.format_round_results(
-                c, len(client_idxs), sorted(client_idxs), n_train_examples, train_loss, train_acc, test_loss, test_acc, test_acc_p10, test_acc_p90, test_acc_reached_target)
-            results['cluster_name'] = cluster_name
-            self.write_csv(ROUND_RESULTS_FILE_NAME, results)
+            stats['settings_id'] = self.config['id']
+            stats['timestamp'] = time()
+            stats['cluster_name'] = cluster_name
+            stats['client_idxs'] = sorted(client_idxs)
+            self.write_csv(ROUND_RESULTS_FILE_NAME, stats)
 
             global_weight_delta_norm = torch.dist(
                 cached_global_weights, self.model_weights_to_vector(self.server.model.state_dict()), p=2)
@@ -405,9 +415,9 @@ class FCFLExperiment(Experiment):
             print(f"{round(elapsed)}s elapsed")
 
         # Record final results to a separate CSV
-        results['time_elapsed'] = elapsed
-        results['timed_out'] = elapsed >= MAX_TIMEOUT
-        self.write_csv(FINAL_RESULTS_FILE_NAME, results)
+        stats['time_elapsed'] = elapsed
+        stats['timed_out'] = elapsed >= MAX_TIMEOUT
+        self.write_csv(FINAL_RESULTS_FILE_NAME, stats)
         print(
             f"Training {'stopped after' if elapsed >= MAX_TIMEOUT else 'complete in'} {c} communication rounds")
 

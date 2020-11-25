@@ -26,6 +26,9 @@ class AbstractServer(ABC):
     def init_model(self):
         self.model = self.model_fn()
 
+    def save_model_weights(self):
+        torch.save(self.model.state_dict(), GLOBAL_WEIGHTS_FILE_PATH)
+
     @abstractmethod
     def train(self):
         pass
@@ -52,9 +55,6 @@ class AbstractFederatedLearningServer(AbstractServer):
 
         self.dataset.partition(n_splits=self.settings['n_clients'])
         self.save_model_weights()
-
-    def save_model_weights(self):
-        torch.save(self.model.state_dict(), GLOBAL_WEIGHTS_FILE_PATH)
 
     def load_model_weights(self, weights):
         self.model.load_state_dict(weights)
@@ -165,6 +165,7 @@ class CentralizedServer(AbstractServer):
                 print(
                     f"TRAINING: Epoch {epoch+1}, {self.train_metrics.print_results()}")
 
+        self.save_model_weights()
         return self.model.state_dict(), self.train_metrics
 
     def evaluate(self):

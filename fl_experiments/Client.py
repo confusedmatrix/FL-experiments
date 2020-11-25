@@ -88,6 +88,6 @@ class Client():
                 preds = self.model(features)
                 self.test_metrics.update(preds, labels)
 
-        # print(f"LOCAL EVALUATION: Client #{self.id}, {self.test_metrics.print_results()}")
+        print(f"LOCAL EVALUATION: Client #{self.id}, {self.test_metrics.print_results()}")
 
         return self.test_metrics
