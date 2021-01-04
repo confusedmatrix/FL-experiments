@@ -57,18 +57,21 @@ class Experiment():
         self.optim_fn = lambda model: Optim(model, self.config)
 
         # Set up metrics
-        metrics = []
-        metrics.append(CountMetric())
-        metrics.append(LossMetric(loss_fn=self.loss_fn))
-        
-        assert 'accuracy' in self.settings.metrics, "Accuracy metric not defined (ensure you have called settings.add_metric('accuracy', fn)"
-        for name, metric_fn in self.settings.metrics.items():
-            if name == 'accuracy':
-                metrics.append(AccuracyMetric(acc_fn=self.settings.metrics['accuracy']))
-            else:
-                metrics.append(CustomMetric(name, metric_fn))
+        def get_metrics():
+            metrics = []
+            metrics.append(CountMetric())
+            metrics.append(LossMetric(loss_fn=self.loss_fn))
+            
+            assert 'accuracy' in self.settings.metrics, "Accuracy metric not defined (ensure you have called settings.add_metric('accuracy', fn)"
+            for name, metric_fn in self.settings.metrics.items():
+                if name == 'accuracy':
+                    metrics.append(AccuracyMetric(acc_fn=self.settings.metrics['accuracy']))
+                else:
+                    metrics.append(CustomMetric(name, metric_fn))
 
-        self.train_metrics_fn = lambda: Metrics(metrics)
+            return metrics
+
+        self.train_metrics_fn = lambda: Metrics(get_metrics())
         self.test_metrics_fn = self.train_metrics_fn
 
         np.random.seed(self.config['seed'])
@@ -129,8 +132,10 @@ class Experiment():
         stats['round'] = c
         stats['n_clients'] = None
         stats['n_train_examples'] = None
+        stats['train_loss_list'] = None
         stats['train_loss'] = None
         stats['train_acc'] = None
+        stats['test_loss_list'] = None
         stats['test_loss'] = None
         stats['test_acc_list'] = []
         stats['test_acc'] = None
@@ -142,8 +147,10 @@ class Experiment():
         if type(train_metrics) is tuple:
             stats['n_clients'] = len(train_metrics)
             stats['n_train_examples'] = np.sum(list(map(lambda m: m.get('count').result(), train_metrics)))
+            stats['train_loss_list'] = [m.get('loss').result() for m in train_metrics]
             stats['train_loss'] = np.mean(list(map(lambda m: m.get('loss').result(), train_metrics)))
             stats['train_acc'] = np.mean(list(map(lambda m: m.get('accuracy').result(), train_metrics)))
+            stats['test_loss_list'] = list(map(lambda m: m.get('loss').result(), test_metrics))
             stats['test_loss'] = np.mean(list(map(lambda m: m.get('loss').result(), test_metrics)))
             stats['test_acc_list'] = list(map(lambda m: m.get('accuracy').result(), test_metrics))
             stats['test_acc'] = np.mean(stats['test_acc_list'])
