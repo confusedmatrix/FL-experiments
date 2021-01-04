@@ -48,9 +48,9 @@ class FederatedDataset(Dataset):
         self.client_test_sets = None
 
     @abstractmethod
-    def partition(self, strategy):
+    def partition(self):
         """
-        Partitions train and test datasets via given strategy
+        Partitions train and test datasets
         """
         pass
 

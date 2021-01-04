@@ -53,7 +53,7 @@ class AbstractFederatedLearningServer(AbstractServer):
                                             test_metrics_fn=self.test_metrics_fn,
                                             device=self.device)
 
-        self.dataset.partition(n_splits=self.settings['n_clients'])
+        self.dataset.partition()
         self.save_model_weights()
 
     def load_model_weights(self, weights):
