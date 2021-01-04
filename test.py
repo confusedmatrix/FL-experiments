@@ -41,11 +41,12 @@ class DummyFederatedDataset(FederatedDataset, DummyDataset):
     Optionally extends DummyDataset (inherits load method from DummyDataset)
     """
 
-    def partition(self, n_splits=100, strategy=None):
+    def partition(self):
         """
-        Partitions train and test datasets via given strategy
+        Partitions train and test datasets
         """
         def get_split_lengths(dataset):
+            n_splits = self.settings['n_clients']
             ds_len = len(dataset)
             split_lens = [ds_len // n_splits for _ in range(n_splits)]
             if ds_len % n_splits != 0:
