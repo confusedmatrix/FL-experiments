@@ -182,7 +182,7 @@ class Experiment():
         return stats
 
     def print_round_results(self, stats):
-        output = ', '.join([f'{key}: {str(val)}' for key, val in enumerate(stats)])
+        output = ', '.join([f'{key}: {str(val)}' for key, val in stats.items()])
         print('END OF ROUND RESULTS - ', output)
 
     def run(self):
