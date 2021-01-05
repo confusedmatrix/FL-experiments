@@ -50,6 +50,12 @@ class Client():
         Load latest global model weights
         """
         self.model.load_state_dict(torch.load(GLOBAL_WEIGHTS_FILE_PATH))
+
+    def load_weights(self, weights):
+        """
+        Load given model weights
+        """
+        self.model.load_state_dict(weights)
     
     def train(self):
         """
@@ -75,11 +81,15 @@ class Client():
         
         return self.model.state_dict(), self.train_metrics
 
-    def evaluate(self):
+    def evaluate(self, weights=None):
         """
-        Evaluate metrics using the global model on the client test set
+        Evaluate metrics using the loaded weights on the client test set
         """
-        self.load_global_weights()
+        if weights is None:
+            self.load_global_weights()
+        else:
+            self.load_weights(weights)
+            
         self.test_metrics.reset()
         for features, labels in self.test_loader:
             features, labels = features.to(self.device), labels.to(self.device)

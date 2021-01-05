@@ -1,10 +1,7 @@
 from collections import OrderedDict
 import csv
-import importlib
 import math
 from time import time
-import sys
-import itertools
 
 import GPUtil
 import numpy as np
@@ -14,7 +11,7 @@ from sklearn.cluster import AgglomerativeClustering
 from .config import MAX_TIMEOUT, EXPERIMENT_SETTINGS_FILE_NAME, ROUND_RESULTS_FILE_NAME, FINAL_RESULTS_FILE_NAME
 from .ExperimentSettings import ExperimentSettings
 from .Metric import Metrics, LossMetric, CountMetric, AccuracyMetric, CustomMetric
-from .Server import CentralizedServer, FedAvgServer
+from .Server import CentralizedServer, LocalLearningOnlyServer, FedAvgServer
 
 
 class Experiment():
@@ -117,7 +114,13 @@ class Experiment():
         return weight_vector
 
     def init_server(self):
-        Server = CentralizedServer if self.config['algorithm'] == 'Centralized' else FedAvgServer
+        if self.config['algorithm'] == 'Centralized':
+            Server = CentralizedServer 
+        elif self.config['algorithm'] == 'Local':
+            Server = LocalLearningOnlyServer
+        else:
+            Server = FedAvgServer
+
         self.server = Server(settings=self.config,
                              device=self.device,
                              dataset=self.dataset,
@@ -232,16 +235,21 @@ class Experiment():
                 self.server.model.state_dict())
 
             # In distributed setting only
-            if self.config['algorithm'] != 'Centralized':
+            if self.config['algorithm'] not in ['Centralized']:
                 self.server.sample_clients()
 
             weights, train_metrics = self.server.train()
 
             # In distributed setting only
-            if self.config['algorithm'] != 'Centralized':
+            if self.config['algorithm'] not in ['Centralized']:
                 self.server.aggregate_models(weights, train_metrics)
 
-            test_metrics = self.server.evaluate()
+            # In Local training only mode, evaluate on individual client weights, else use global model weights
+            if self.config['algorithm'] == 'Local':
+                self.server.save_model_weights(weights)
+                test_metrics = self.server.evaluate(weights)
+            else:
+                test_metrics = self.server.evaluate()
             
             stats = self.get_train_test_stats(c, train_metrics, test_metrics)
             self.print_round_results(stats)

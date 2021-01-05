@@ -1,6 +1,3 @@
-import math
-
-import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader, random_split
@@ -100,14 +97,14 @@ settings.add_metric('accuracy', accuracy)
 settings.add_metric('dummy_metric', accuracy)
 
 args = {
-    'algorithm': 'FedAvg',
-    'dataset': 'FedDataset',
-    # 'algorithm': 'Centralized',
-    # 'dataset': 'StdDataset',
+    # 'algorithm': 'FedAvg',
+    # 'dataset': 'FedDataset',
+    'algorithm': 'Centralized',
+    'dataset': 'StdDataset',
     'model': 'SimpleModel',
     'n_clients': 10,
-    'n_rounds': 3,
-    # 'n_epochs': 3,
+    'n_rounds': 1,
+    'n_epochs': 3,
     'loss_fn': 'NLLLoss',
     'optim_fn': 'SGD'
 }

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from functools import reduce
 from collections import OrderedDict
 import math
 import numpy as np
@@ -26,8 +25,12 @@ class AbstractServer(ABC):
     def init_model(self):
         self.model = self.model_fn()
 
-    def save_model_weights(self):
-        torch.save(self.model.state_dict(), GLOBAL_WEIGHTS_FILE_PATH)
+    def save_model_weights(self, weights=None):
+        if weights is None:
+            torch.save(self.model.state_dict(), GLOBAL_WEIGHTS_FILE_PATH)
+        else:
+            for k, v in enumerate(weights):
+                torch.save(v, f'client-weights-{k}.pth')
 
     @abstractmethod
     def train(self):
@@ -95,14 +98,15 @@ class AbstractFederatedLearningServer(AbstractServer):
         weights, metrics = zip(*results)
         return weights, metrics
 
-    def evaluate(self):
+    def evaluate(self, weights=None):
         """
         Evaluates test metrics on all clients
         """
         metrics = []
         for k in range(self.settings['n_clients']):
             client = self.client_factory.make_client(k)
-            metrics.append(client.evaluate())
+            client_weights = None if weights is None else weights[k]
+            metrics.append(client.evaluate(client_weights))
 
         return metrics
 
@@ -181,6 +185,14 @@ class CentralizedServer(AbstractServer):
             f"EVALUATION: {self.test_metrics.print_results()}\n")
 
         return self.test_metrics
+
+
+class LocalLearningOnlyServer(AbstractFederatedLearningServer):
+    def sample_clients(self):
+        self.clients = range(0, self.settings['n_clients'])
+
+    def aggregate_models(self, weights, metrics):
+        pass
 
 
 class FedAvgServer(AbstractFederatedLearningServer):

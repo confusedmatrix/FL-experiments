@@ -15,7 +15,7 @@ SETTINGS_DEFINITIONS['group_name'] = {
 SETTINGS_DEFINITIONS['algorithm'] = {
     'type': str,
     'default': 'FedAvg',
-    'choices': ['Centralized', 'FedAvg', 'FL+HC'],
+    'choices': ['Centralized', 'FedAvg', 'FL+HC', 'Local'],
     'command': ['-a', '--algorithm'],
 }
 SETTINGS_DEFINITIONS['model'] = {
