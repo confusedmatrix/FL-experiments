@@ -170,7 +170,7 @@ class ExperimentSettings():
         Returns all settings as an argument list to be passed on the command line, e.g. ['-l', '0.01', '-r', '100', ...]
         """
         arg_list = []
-        for (key, val) in self.config:
+        for key, val in self.config.ietms():
             # Skip settings with a value of None (likely optional settings)
             if val is None:
                 continue
