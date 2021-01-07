@@ -179,11 +179,11 @@ class Experiment():
 
             custom_train_metrics = train_metrics.get_all_custom()
             for ctm in custom_train_metrics:
-                stats[ctm.name] = ctm.result()
+                stats[f'train_{ctm.name}'] = ctm.result()
 
             custom_test_metrics = test_metrics.get_all_custom()
             for ctm in custom_test_metrics:
-                stats[ctm.name] = ctm.result()
+                stats[f'test_{ctm.name}'] = ctm.result()
 
         return stats
 
