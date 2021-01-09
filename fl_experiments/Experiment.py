@@ -27,6 +27,13 @@ class Experiment():
         self.settings = settings
         self.config = settings.config
 
+        np.random.seed(self.config['seed'])
+        torch.manual_seed(self.config['seed'])
+
+        use_cuda = torch.cuda.is_available()
+        self.device = torch.device(
+            f'cuda:{GPUtil.getFirstAvailable()[0]}' if use_cuda else 'cpu')
+
         # Set up dataset
         dataset_name = self.config['dataset']
         assert dataset_name in self.settings.datasets, f'Unrecognised Dataset: "{dataset_name}"'
@@ -39,7 +46,7 @@ class Experiment():
         model_name = self.config['model']
         assert model_name in self.settings.models, f'Unrecognised Model: "{model_name}"'
         Model = self.settings.models[model_name]
-        self.model_fn = lambda: Model(self.dataset)
+        self.model_fn = lambda: Model(self.dataset, self.device)
 
         # Set up loss fn
         loss_fn_name = self.config['loss_fn']
@@ -70,13 +77,6 @@ class Experiment():
 
         self.train_metrics_fn = lambda: Metrics(get_metrics())
         self.test_metrics_fn = self.train_metrics_fn
-
-        np.random.seed(self.config['seed'])
-        torch.manual_seed(self.config['seed'])
-
-        use_cuda = torch.cuda.is_available()
-        self.device = torch.device(
-            f'cuda:{GPUtil.getFirstAvailable()[0]}' if use_cuda else 'cpu')
 
         self.init_server()
         self.write_csv(EXPERIMENT_SETTINGS_FILE_NAME, self.config)
