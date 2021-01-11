@@ -83,7 +83,7 @@ class SimpleModel(torch.nn.Module):
 settings = ExperimentSettings()
 settings.add_dataset('StdDataset', DummyDataset)
 settings.add_dataset('FedDataset', DummyFederatedDataset)
-settings.add_model('SimpleModel', lambda ds: SimpleModel(input_size = ds.meta['n_features'], output_size=ds.meta['n_labels']))
+settings.add_model('SimpleModel', lambda ds, device: SimpleModel(input_size = ds.meta['n_features'], output_size=ds.meta['n_labels']))
 settings.add_loss_fn('NLLLoss', torch.nn.NLLLoss)
 settings.add_optim_fn('SGD', lambda model, config: torch.optim.SGD(model.parameters(), lr=config['learning_rate']))
 

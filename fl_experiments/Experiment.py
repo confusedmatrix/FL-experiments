@@ -284,14 +284,12 @@ class FCFLExperiment(Experiment):
             range(self.config['n_clients']))
         assert 'cluster_dist_metric' in self.config and self.config['cluster_dist_metric'] in (
             'manhattan', 'euclidean', 'cosine'), 'cluster_dist_metric must be: manhattan, euclidean or cosine'
-
-        if self.config['cluster_algorithm'] == 'hierarchical':
-            assert 'cluster_hierarchical_dist_threshold' in self.config and isinstance(
-                self.config['cluster_hierarchical_dist_threshold'], float), 'cluster_hierarchical_dist_threshold setting must be set to a float'
-            assert 'cluster_hierarchical_linkage' in self.config and self.config['cluster_hierarchical_linkage'] in (
-                'ward', 'average', 'complete', 'single'), 'cluster_hierarchical_linkage setting must be: ward, average, complete or single'
-            if self.config['cluster_hierarchical_linkage'] == 'ward':
-                assert self.config['cluster_dist_metric'] == 'euclidean', 'When using cluster_hierarchical_linkage=ward, cluster_dist_metric must be set to euclidean'
+        assert 'cluster_hierarchical_dist_threshold' in self.config and isinstance(
+            self.config['cluster_hierarchical_dist_threshold'], float), 'cluster_hierarchical_dist_threshold setting must be set to a float'
+        assert 'cluster_hierarchical_linkage' in self.config and self.config['cluster_hierarchical_linkage'] in (
+            'ward', 'average', 'complete', 'single'), 'cluster_hierarchical_linkage setting must be: ward, average, complete or single'
+        if self.config['cluster_hierarchical_linkage'] == 'ward':
+            assert self.config['cluster_dist_metric'] == 'euclidean', 'When using cluster_hierarchical_linkage=ward, cluster_dist_metric must be set to euclidean'
 
     def run(self):
         print("EXPERIMENT SETTINGS")
