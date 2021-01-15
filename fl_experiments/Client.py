@@ -57,10 +57,13 @@ class Client():
         """
         self.model.load_state_dict(weights)
     
-    def train(self):
+    def train(self, weights=None):
         """
         Perform training
         """
+        if weights is not None:
+            self.load_weights(weights)
+
         optim = self.optim_fn(self.model)
         for epoch in range(self.settings['n_epochs']):
             self.train_metrics.reset()

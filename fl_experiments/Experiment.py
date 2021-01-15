@@ -201,6 +201,7 @@ class Experiment():
         c = 0
         test_acc = 0
         elapsed = 0
+        weights = None
         cached_global_weights = None
         global_weight_delta_norm = math.inf
 
@@ -238,7 +239,11 @@ class Experiment():
             if self.config['algorithm'] not in ['Centralized']:
                 self.server.sample_clients()
 
-            weights, train_metrics = self.server.train()
+            # In Local training only mode, train on individual client weights, else use global model weights
+            if self.config['algorithm'] == 'Local':
+                weights, train_metrics = self.server.train(weights)
+            else:
+                weights, train_metrics = self.server.train()
 
             # In distributed setting only
             if self.config['algorithm'] not in ['Centralized']:

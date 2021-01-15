@@ -73,7 +73,7 @@ class AbstractFederatedLearningServer(AbstractServer):
             self.settings['client_fraction'] * len(client_idxs))
         self.clients = np.random.permutation(client_idxs)[:n_clients]
 
-    def train(self):
+    def train(self, weights=None):
         """
         Performs training only on sampled clients 
         """
@@ -81,7 +81,8 @@ class AbstractFederatedLearningServer(AbstractServer):
         results = []
         for k in self.clients:
             client = self.client_factory.make_client(k)
-            results.append(client.train())
+            client_weights = None if weights is None else weights[k]
+            results.append(client.train(client_weights))
 
         weights, metrics = zip(*results)
         return weights, metrics
