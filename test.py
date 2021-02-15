@@ -97,17 +97,18 @@ settings.add_metric('accuracy', accuracy)
 settings.add_metric('dummy_metric', accuracy)
 
 args = {
-    'algorithm': 'Local',
+    'algorithm': 'FedAvg',
     'dataset': 'FedDataset',
     # 'algorithm': 'Centralized',
     # 'dataset': 'StdDataset',
     'model': 'SimpleModel',
     'n_clients': 10,
-    'n_rounds': 20,
-    'n_epochs': 1,
-    'client_fraction': 1.0,
+    'n_rounds': 3,
+    'n_epochs': 3,
+    'client_fraction': 0.3,
     'loss_fn': 'NLLLoss',
-    'optim_fn': 'SGD'
+    'optim_fn': 'SGD',
+    # 'init_weights_file': '0.pth'
 }
 settings.set_config(**args)
 print(settings.config)

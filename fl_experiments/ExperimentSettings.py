@@ -78,6 +78,11 @@ SETTINGS_DEFINITIONS['target_accuracy'] = {
     'default': 0.5,
     'command': ['-t', '--target-accuracy'],
 }
+SETTINGS_DEFINITIONS['init_weights_file'] = {
+    'type': str,
+    'default': None,
+    'command': ['-w', '--init-weights-file'],
+}
 # This is a flag specific to GCP AI platform jobs and indicates the location to save results to
 SETTINGS_DEFINITIONS['job_dir'] = {
     'type': str,

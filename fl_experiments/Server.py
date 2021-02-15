@@ -57,6 +57,11 @@ class AbstractFederatedLearningServer(AbstractServer):
                                             device=self.device)
 
         self.dataset.partition()
+        
+        # Load initial global weights from file if necessary
+        if self.settings['init_weights_file'] is not None:
+            self.load_model_weights(torch.load(self.settings['init_weights_file']))
+
         self.save_model_weights()
 
     def load_model_weights(self, weights):
