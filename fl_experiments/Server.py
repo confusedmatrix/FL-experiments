@@ -60,7 +60,7 @@ class AbstractFederatedLearningServer(AbstractServer):
         
         # Load initial global weights from file if necessary
         if self.settings['init_weights_file'] is not None:
-            self.load_model_weights(torch.load(self.settings['init_weights_file']))
+            self.load_model_weights(torch.load(self.settings['init_weights_file'], map_location=self.device))
 
         self.save_model_weights()
 
