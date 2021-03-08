@@ -1,4 +1,4 @@
-MAX_TIMEOUT = 3600 * 6  # 6 hours
+MAX_TIMEOUT = 3600 * 12 # 12 hours
 GLOBAL_WEIGHTS_FILE_PATH = 'tmp-global-weights.pth'
 EXPERIMENT_SUITE_FILE_NAME = 'experiments.csv'
 EXPERIMENT_SETTINGS_FILE_NAME = 'experiment.csv'
