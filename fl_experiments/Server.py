@@ -25,9 +25,9 @@ class AbstractServer(ABC):
     def init_model(self):
         self.model = self.model_fn()
 
-    def save_model_weights(self, weights=None):
+    def save_model_weights(self, weights=None, filename=None):
         if weights is None:
-            torch.save(self.model.state_dict(), GLOBAL_WEIGHTS_FILE_PATH)
+            torch.save(self.model.state_dict(), filename if filename is not None else GLOBAL_WEIGHTS_FILE_PATH)
         else:
             for k, v in enumerate(weights):
                 torch.save(v, f'client-weights-{k}.pth')

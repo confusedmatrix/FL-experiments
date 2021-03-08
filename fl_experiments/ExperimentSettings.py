@@ -143,6 +143,7 @@ class ExperimentSettings():
         self.optim_fns = {}
         self.metrics = {}
         self.config = {}
+        self.is_best_model = lambda prev_acc, new_acc: new_acc > prev_acc
 
         # Set sonfig defaults
         for name in SETTINGS_DEFINITIONS:
@@ -162,6 +163,9 @@ class ExperimentSettings():
 
     def add_metric(self, name, metric):
         self.metrics[name] = metric
+
+    def add_model_comparator_fn(self, fn):
+        self.is_best_model = fn
 
     def set_config(self, **kwargs):
         for name, value in kwargs.items():

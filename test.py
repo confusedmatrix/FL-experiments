@@ -94,7 +94,8 @@ def accuracy(log_ps, target):
     return torch.mean(equals.type(torch.FloatTensor))
 
 settings.add_metric('accuracy', accuracy)
-settings.add_metric('dummy_metric', accuracy)
+settings.add_metric('dummy_metric', accuracy) 
+settings.add_model_comparator_fn(lambda best_acc, new_acc: new_acc > best_acc)
 
 args = {
     'algorithm': 'FedAvg',

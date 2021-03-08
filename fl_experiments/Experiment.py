@@ -200,6 +200,7 @@ class Experiment():
         self.start_time = time()
         c = 0
         test_acc = 0
+        best_test_acc = None
         elapsed = 0
         weights = None
         cached_global_weights = None
@@ -257,6 +258,14 @@ class Experiment():
                 test_metrics = self.server.evaluate()
             
             stats = self.get_train_test_stats(c, train_metrics, test_metrics)
+
+            # Save best model
+            if self.config['algorithm'] != 'Local':
+                if best_test_acc == None or self.settings.is_best_model(best_test_acc, stats['test_acc']):
+                    print('NEW BEST MODEL - prev:', best_test_acc, ', new:', stats['test_acc'])
+                    best_test_acc = stats['test_acc']
+                    self.server.save_model_weights(None, 'best-model.pth')
+
             self.print_round_results(stats)
 
             stats['settings_id'] = self.config['id']
