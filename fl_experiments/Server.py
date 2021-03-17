@@ -84,9 +84,9 @@ class AbstractFederatedLearningServer(AbstractServer):
         """
         assert self.clients is not None, "Clients must be sampled before calling this method"
         results = []
-        for k in self.clients:
+        for i, k in enumerate(self.clients):
             client = self.client_factory.make_client(k)
-            client_weights = None if weights is None else weights[k]
+            client_weights = None if weights is None else weights[i]
             results.append(client.train(client_weights))
 
         weights, metrics = zip(*results)
@@ -195,7 +195,22 @@ class CentralizedServer(AbstractServer):
 
 class LocalLearningOnlyServer(AbstractFederatedLearningServer):
     def sample_clients(self):
-        self.clients = range(0, self.settings['n_clients'])
+        if self.settings['client_idxs'] is not None:
+            self.clients = self.settings['client_idxs']
+        else:
+            self.clients = range(0, self.settings['n_clients'])
+
+    def evaluate(self, weights=None):
+        """
+        Evaluates test metrics on all clients
+        """
+        metrics = []
+        for i, k in enumerate(self.clients):
+            client = self.client_factory.make_client(k)
+            client_weights = None if weights is None else weights[i]
+            metrics.append(client.evaluate(client_weights))
+
+        return metrics
 
     def aggregate_models(self, weights, metrics):
         pass

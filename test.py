@@ -98,17 +98,18 @@ settings.add_metric('dummy_metric', accuracy)
 settings.add_model_comparator_fn(lambda best_acc, new_acc: new_acc > best_acc)
 
 args = {
-    'algorithm': 'FedAvg',
+    'algorithm': 'Local',
     'dataset': 'FedDataset',
     # 'algorithm': 'Centralized',
     # 'dataset': 'StdDataset',
     'model': 'SimpleModel',
-    'n_clients': 10,
+    'n_clients': 100,
     'n_rounds': 3,
     'n_epochs': 3,
     'client_fraction': 0.3,
     'loss_fn': 'NLLLoss',
     'optim_fn': 'SGD',
+    'client_idxs': "[3,5,10]"
     # 'init_weights_file': '0.pth'
 }
 settings.set_config(**args)

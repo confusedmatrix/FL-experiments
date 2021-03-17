@@ -78,6 +78,11 @@ SETTINGS_DEFINITIONS['target_accuracy'] = {
     'default': 0.5,
     'command': ['-t', '--target-accuracy'],
 }
+SETTINGS_DEFINITIONS['client_idxs'] = {
+    'type': str,
+    'default': None,
+    'command': ['--client-idxs'],
+}
 SETTINGS_DEFINITIONS['init_weights_file'] = {
     'type': str,
     'default': None,
@@ -172,6 +177,11 @@ class ExperimentSettings():
             assert name in SETTINGS_DEFINITIONS, f'Unrecognized experiment setting: "{name}"'
             if 'choices' in SETTINGS_DEFINITIONS[name]:
                 assert value in SETTINGS_DEFINITIONS[name]['choices'], f'Invalid value "{value}" for experiment setting: "{name}"'
+
+            # convert client_idxs string to array
+            if name == 'client_idxs' and type(value) is str:
+                value = [int(i) for i in value[1:-1].split(',')]
+                
             self.config[name] = value
 
     def get_settings_as_command_line_arg_list(self):
