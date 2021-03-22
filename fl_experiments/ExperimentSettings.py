@@ -194,6 +194,10 @@ class ExperimentSettings():
             if val is None:
                 continue
 
+            # convert client_idxs array to str
+            if key == 'client_idxs' and type(val) is list:
+                val = f"[{','.join([str(i) for i in val])}]"
+
             arg_list.append(SETTINGS_DEFINITIONS[key]['command'][0])
             arg_list.append(val) if val is not None else arg_list.append(
                 SETTINGS_DEFINITIONS[key]['default'])
